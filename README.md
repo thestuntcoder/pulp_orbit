@@ -4,7 +4,7 @@ A cheerful, original, ad-free fruit-slicing game for family play. The entire gam
 
 ## Play
 
-**Play online:** <https://thestuntcoder.github.io/fruit_shinobi/>
+**Play online:** <https://thestuntcoder.github.io/pulp_orbit/>
 
 Or download and open `index.html` directly. To serve the folder locally:
 
