@@ -1,0 +1,1206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#dff4dc" />
+  <meta name="description" content="Slice Garden is a cheerful, private, ad-free fruit slicing game for families." />
+  <title>Slice Garden — an ad-free family game</title>
+  <style>
+:root {
+  --ink: #24352b;
+  --muted: #617066;
+  --cream: #fffdf5;
+  --panel: rgba(255, 253, 245, 0.94);
+  --green: #19734b;
+  --green-dark: #115a39;
+  --lime: #d8ed68;
+  --coral: #ee6847;
+  --yellow: #f5c84c;
+  --blue: #5d83d7;
+  --focus: #2459d3;
+  --shadow: 0 24px 70px rgba(43, 76, 55, 0.2);
+  --soft-shadow: 0 8px 24px rgba(43, 76, 55, 0.14);
+  font-family: ui-rounded, "Avenir Next Rounded", "Nunito", "Trebuchet MS", system-ui, sans-serif;
+  color: var(--ink);
+  background: #e7f3dc;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; min-height: 100%; }
+
+body {
+  min-height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 8% 8%, rgba(255,255,255,.86) 0 5%, transparent 5.2%),
+    radial-gradient(circle at 92% 14%, rgba(255,255,255,.58) 0 7%, transparent 7.2%),
+    linear-gradient(150deg, #edf7df 0%, #d4edcf 60%, #c9e8c9 100%);
+}
+
+button { font: inherit; }
+button:focus-visible, canvas:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.app {
+  width: 100%;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(10px, 2.5vw, 28px);
+}
+
+.game-shell {
+  position: relative;
+  width: min(1180px, calc(100vw - clamp(20px, 5vw, 56px)));
+  height: min(780px, calc(100dvh - 76px));
+  min-height: 520px;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgba(36, 53, 43, .13);
+  border-radius: clamp(24px, 3vw, 38px);
+  background: linear-gradient(180deg, #bde8ed 0%, #dff3df 54%, #81ba62 54.2%, #5d9c4b 100%);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.86);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.scenery, #game-canvas { position: absolute; inset: 0; }
+.scenery { overflow: hidden; pointer-events: none; }
+#game-canvas { width: 100%; height: 100%; touch-action: none; cursor: crosshair; z-index: 2; }
+
+.cloud {
+  position: absolute;
+  width: 120px;
+  height: 32px;
+  background: rgba(255,255,255,.55);
+  border-radius: 50px;
+  filter: blur(.2px);
+}
+.cloud::before, .cloud::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background: inherit;
+}
+.cloud::before { width: 54px; height: 54px; left: 22px; bottom: 5px; }
+.cloud::after { width: 70px; height: 70px; right: 14px; bottom: 0; }
+.cloud-one { top: 18%; left: 9%; transform: scale(.72); }
+.cloud-two { top: 14%; right: 10%; transform: scale(.48); opacity: .72; }
+
+.hill { position: absolute; border-radius: 50% 50% 0 0; transform-origin: bottom; }
+.hill-back { width: 95%; height: 43%; left: -20%; bottom: -19%; background: #92c875; transform: rotate(8deg); }
+.hill-front { width: 92%; height: 41%; right: -20%; bottom: -20%; background: #6eac57; transform: rotate(-8deg); }
+.flower { position: absolute; bottom: 4%; color: rgba(255,245,193,.75); font-size: 24px; }
+.flower-one { left: 7%; transform: rotate(-8deg); }
+.flower-two { right: 8%; bottom: 9%; transform: rotate(12deg) scale(.8); }
+
+.hud {
+  position: absolute;
+  z-index: 8;
+  top: max(16px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.brand-mini, .score-pill, .lives-pill, .icon-button, .chip-button {
+  border: 1px solid rgba(36, 53, 43, .1);
+  background: rgba(255, 253, 245, .89);
+  box-shadow: 0 6px 18px rgba(36, 53, 43, .1), inset 0 1px 0 #fff;
+  backdrop-filter: blur(12px);
+}
+
+.brand-mini {
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 18px 0 10px;
+  border-radius: 18px;
+  font-size: 16px;
+  font-weight: 850;
+  letter-spacing: -.02em;
+}
+.brand-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 11px; background: #ddf0a6; }
+.score-pill, .lives-pill {
+  height: 52px;
+  min-width: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 17px;
+  border-radius: 18px;
+}
+.score-pill { margin-left: auto; }
+.label { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.score-pill strong { min-width: 34px; text-align: right; font-size: 24px; font-variant-numeric: tabular-nums; }
+.hearts { color: #dd4f47; letter-spacing: 2px; white-space: nowrap; text-shadow: 0 1px 0 #fff; }
+.icon-button {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 900;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.icon-button:disabled { opacity: .42; cursor: default; }
+.icon-button:not(:disabled):hover { transform: translateY(-2px); }
+.icon-button:not(:disabled):active { transform: translateY(1px); }
+
+.corner-controls {
+  position: absolute;
+  z-index: 9;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  display: flex;
+  gap: 8px;
+}
+.chip-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.chip-button:hover { background: #fff; transform: translateY(-1px); }
+.chip-button[aria-pressed="false"] { color: #59655d; }
+
+.overlay {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 88px 20px 72px;
+  background: linear-gradient(100deg, rgba(223,244,230,.58), rgba(255,252,235,.28));
+  backdrop-filter: blur(2px);
+  transition: opacity .18s ease, visibility .18s ease;
+}
+.overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.panel {
+  width: min(520px, 94%);
+  max-height: 100%;
+  overflow: auto;
+  padding: clamp(28px, 5vh, 48px) clamp(26px, 5vw, 54px);
+  text-align: center;
+  border: 1px solid rgba(36,53,43,.12);
+  border-radius: 32px;
+  background: var(--panel);
+  box-shadow: var(--shadow), inset 0 1px 0 #fff;
+}
+.start-panel { position: relative; }
+.compact-panel { width: min(460px, 94%); }
+.panel h1 {
+  margin: 2px 0 16px;
+  font-size: clamp(50px, 8vh, 78px);
+  line-height: .83;
+  letter-spacing: -.075em;
+  color: #234c36;
+}
+.panel h1 span { color: var(--coral); }
+.panel h2 { margin: 4px 0 10px; font-size: clamp(34px, 5vw, 48px); line-height: 1; letter-spacing: -.05em; }
+.panel p { color: var(--muted); line-height: 1.55; }
+.eyebrow { margin: 0 0 10px !important; color: var(--green) !important; font-size: 12px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.intro { max-width: 390px; margin: 0 auto 22px; font-size: 16px; }
+
+.fruit-cluster { position: absolute; top: -22px; right: 24px; width: 98px; height: 74px; transform: rotate(7deg); }
+.mini-fruit { position: absolute; font-size: 70px; line-height: 1; text-shadow: 0 5px 0 rgba(36,53,43,.14); }
+.mini-fruit.apple { left: 0; color: #ed6654; }
+.mini-fruit.orange { right: 0; top: 14px; color: #f3a43b; font-size: 58px; }
+.mini-fruit.plum { left: 36px; top: -8px; color: #7c63ab; font-size: 42px; }
+.fruit-cluster .leaf { position: absolute; top: 0; left: 17px; color: #438450; transform: rotate(35deg); }
+
+.primary-button {
+  width: 100%;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 14px 0 22px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 6px 0 #0e5434, 0 11px 24px rgba(24, 103, 67, .22);
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
+}
+.primary-button:hover { background: var(--green-dark); transform: translateY(-2px); box-shadow: 0 8px 0 #0b482c, 0 14px 26px rgba(24, 103, 67, .24); }
+.primary-button:active { transform: translateY(4px); box-shadow: 0 2px 0 #0b482c, 0 6px 14px rgba(24, 103, 67, .2); }
+.button-arrow { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 auto; border-radius: 12px; background: rgba(255,255,255,.16); font-size: 20px; }
+.text-button { margin-top: 18px; padding: 10px 14px; border: 0; background: transparent; color: var(--green-dark); font-weight: 850; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.text-button:hover { color: var(--ink); }
+
+.how-to { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+.how-to > div { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 8px; border: 1px solid #dfe6d9; border-radius: 15px; color: #556359; font-size: 13px; font-weight: 800; background: rgba(255,255,255,.58); }
+.gesture { font-size: 20px; color: var(--coral); font-weight: 900; }
+.privacy-note { margin: 15px 0 -12px !important; font-size: 11px; font-weight: 750; }
+.privacy-note span { color: var(--green); }
+.panel-icon { width: 64px; height: 64px; display: grid; place-items: center; margin: 0 auto 14px; border-radius: 22px; background: #e7f4c0; font-size: 30px; transform: rotate(-4deg); }
+.panel-icon.celebrate { color: #965811; background: #ffe8a0; }
+
+.final-score { display: flex; align-items: baseline; justify-content: center; gap: 12px; margin: 22px 0; }
+.final-score span { color: var(--muted); font-size: 14px; font-weight: 800; }
+.final-score strong { font-size: 64px; line-height: 1; letter-spacing: -.06em; font-variant-numeric: tabular-nums; color: var(--coral); }
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 22px; }
+.stats-row > div { display: grid; gap: 4px; padding: 12px 6px; border: 1px solid #dde4d8; border-radius: 14px; background: #fffef9; }
+.stats-row span { color: var(--muted); font-size: 11px; font-weight: 750; }
+.stats-row strong { font-size: 19px; }
+
+.combo-badge, .announcement {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 10px) scale(.8);
+}
+.combo-badge {
+  top: 16%;
+  padding: 10px 18px;
+  border: 2px solid rgba(36,53,43,.12);
+  border-radius: 999px;
+  background: #fff4a8;
+  color: #75460d;
+  box-shadow: var(--soft-shadow);
+  font-size: 20px;
+  font-weight: 950;
+}
+.combo-badge.show { animation: badge-pop .58s ease both; }
+.announcement { top: 26%; color: #fff; text-shadow: 0 2px 8px rgba(36,53,43,.35); font-size: 20px; font-weight: 900; }
+.announcement.show { animation: float-message .9s ease both; }
+
+.footer-note { position: fixed; bottom: 8px; margin: 0; color: #52675a; font-size: 11px; font-weight: 750; letter-spacing: .02em; }
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+@keyframes badge-pop {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(.75) rotate(-3deg); }
+  25%, 70% { opacity: 1; transform: translate(-50%, 0) scale(1) rotate(0); }
+  100% { opacity: 0; transform: translate(-50%, -14px) scale(.92); }
+}
+@keyframes float-message {
+  0% { opacity: 0; transform: translate(-50%, 12px); }
+  20%, 70% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -16px); }
+}
+
+@media (max-width: 720px) {
+  .app { padding: 0; }
+  .game-shell { width: 100vw; height: 100dvh; min-height: 480px; border: 0; border-radius: 0; }
+  .footer-note, .brand-mini { display: none; }
+  .hud { top: max(10px, env(safe-area-inset-top)); left: 10px; right: 10px; }
+  .score-pill { margin-left: 0; }
+  .score-pill, .lives-pill { min-width: 0; flex: 1; height: 48px; padding: 0 13px; border-radius: 15px; }
+  .icon-button { width: 48px; height: 48px; border-radius: 15px; }
+  .corner-controls { left: 10px; bottom: max(10px, env(safe-area-inset-bottom)); }
+  .chip-button { width: 44px; padding: 0; justify-content: center; }
+  .chip-button span:last-child { display: none; }
+  .overlay { padding: 76px 14px 66px; }
+  .panel { padding: 30px 24px; border-radius: 26px; }
+  .panel h1 { font-size: clamp(48px, 8.5vh, 68px); }
+  .fruit-cluster { right: 8px; transform: scale(.8) rotate(7deg); }
+}
+
+@media (max-height: 650px) {
+  .panel { padding-top: 24px; padding-bottom: 24px; }
+  .panel h1 { font-size: 48px; margin-bottom: 10px; }
+  .intro { margin-bottom: 14px; }
+  .how-to { margin-top: 12px; }
+  .privacy-note { display: none; }
+  .fruit-cluster { transform: scale(.7); transform-origin: top right; }
+  .panel-icon { width: 50px; height: 50px; margin-bottom: 8px; }
+  .final-score { margin: 12px 0; }
+  .final-score strong { font-size: 46px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+
+  </style>
+</head>
+<body>
+  <main class="app" aria-labelledby="game-title">
+    <section class="game-shell" id="game-shell">
+      <div class="scenery" aria-hidden="true">
+        <span class="cloud cloud-one"></span>
+        <span class="cloud cloud-two"></span>
+        <span class="hill hill-back"></span>
+        <span class="hill hill-front"></span>
+        <span class="flower flower-one">✿</span>
+        <span class="flower flower-two">✿</span>
+      </div>
+
+      <header class="hud" aria-label="Game status">
+        <div class="brand-mini">
+          <span class="brand-mark" aria-hidden="true">🍃</span>
+          <span>Slice Garden</span>
+        </div>
+        <div class="score-pill">
+          <span class="label">Score</span>
+          <strong id="score">0</strong>
+        </div>
+        <div class="lives-pill" aria-label="3 hearts remaining">
+          <span class="label">Hearts</span>
+          <span id="lives" class="hearts" aria-hidden="true">♥ ♥ ♥</span>
+        </div>
+        <button class="icon-button" id="pause-button" type="button" aria-label="Pause game" title="Pause (P)" disabled>
+          <span aria-hidden="true">Ⅱ</span>
+        </button>
+      </header>
+
+      <canvas id="game-canvas" tabindex="0" role="application" aria-label="Slice Garden play area. Drag through fruit to slice it. Use left and right arrow keys to choose a fruit, then press Enter or Space to slice."></canvas>
+
+      <div class="combo-badge" id="combo-badge" aria-hidden="true">Combo ×2!</div>
+      <div class="announcement" id="announcement" aria-hidden="true"></div>
+      <div class="sr-only" id="live-region" aria-live="polite" aria-atomic="true"></div>
+
+      <div class="corner-controls" aria-label="Game preferences">
+        <button class="chip-button" id="sound-button" type="button" aria-pressed="true">
+          <span aria-hidden="true" id="sound-icon">♪</span>
+          <span id="sound-label">Sound on</span>
+        </button>
+        <button class="chip-button" id="motion-button" type="button" aria-pressed="false">
+          <span aria-hidden="true">◌</span>
+          <span id="motion-label">Calm mode off</span>
+        </button>
+      </div>
+
+      <section class="overlay" id="start-overlay" aria-labelledby="game-title">
+        <div class="panel start-panel">
+          <div class="fruit-cluster" aria-hidden="true">
+            <span class="mini-fruit apple">●</span>
+            <span class="mini-fruit orange">●</span>
+            <span class="mini-fruit plum">●</span>
+            <span class="leaf">◆</span>
+          </div>
+          <p class="eyebrow">A little game for big smiles</p>
+          <h1 id="game-title">Slice<br /><span>Garden</span></h1>
+          <p class="intro">Swipe through the fruit before it tumbles away. No ads, no accounts—just play.</p>
+          <button class="primary-button" id="start-button" type="button">
+            <span>Play in the garden</span>
+            <span class="button-arrow" aria-hidden="true">→</span>
+          </button>
+          <div class="how-to" aria-label="How to play">
+            <div><span class="gesture" aria-hidden="true">〰</span><span>Drag to slice</span></div>
+            <div><span class="gesture" aria-hidden="true">♥</span><span>Save 3 hearts</span></div>
+          </div>
+          <p class="privacy-note"><span aria-hidden="true">✓</span> Ad-free &amp; private. Scores stay on this device.</p>
+        </div>
+      </section>
+
+      <section class="overlay hidden" id="pause-overlay" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+        <div class="panel compact-panel">
+          <div class="panel-icon" aria-hidden="true">🌿</div>
+          <p class="eyebrow">Take a breather</p>
+          <h2 id="pause-title">Garden paused</h2>
+          <p>The fruit will wait right where it is.</p>
+          <button class="primary-button" id="resume-button" type="button">
+            <span>Keep playing</span><span class="button-arrow" aria-hidden="true">→</span>
+          </button>
+          <button class="text-button" id="restart-button" type="button">Start this round over</button>
+        </div>
+      </section>
+
+      <section class="overlay hidden" id="gameover-overlay" role="dialog" aria-modal="true" aria-labelledby="gameover-title">
+        <div class="panel compact-panel result-panel">
+          <div class="panel-icon celebrate" aria-hidden="true">✦</div>
+          <p class="eyebrow">Garden gathered!</p>
+          <h2 id="gameover-title">Lovely slicing</h2>
+          <div class="final-score">
+            <span>Your score</span>
+            <strong id="final-score">0</strong>
+          </div>
+          <div class="stats-row">
+            <div><span>Best</span><strong id="best-score">0</strong></div>
+            <div><span>Fruit</span><strong id="fruit-count">0</strong></div>
+            <div><span>Top combo</span><strong id="top-combo">×1</strong></div>
+          </div>
+          <button class="primary-button" id="again-button" type="button">
+            <span>Play again</span><span class="button-arrow" aria-hidden="true">↻</span>
+          </button>
+          <button class="text-button" id="home-button" type="button">Back to the garden gate</button>
+        </div>
+      </section>
+    </section>
+
+    <p class="footer-note">Made for family play · Works with touch, mouse, or keyboard</p>
+  </main>
+  <script>
+(() => {
+  "use strict";
+
+  const $ = (selector) => document.querySelector(selector);
+  const canvas = $("#game-canvas");
+  const ctx = canvas.getContext("2d", { alpha: true });
+  const shell = $("#game-shell");
+
+  const ui = {
+    score: $("#score"), lives: $("#lives"), pause: $("#pause-button"),
+    startOverlay: $("#start-overlay"), pauseOverlay: $("#pause-overlay"), gameoverOverlay: $("#gameover-overlay"),
+    start: $("#start-button"), resume: $("#resume-button"), restart: $("#restart-button"),
+    again: $("#again-button"), home: $("#home-button"),
+    finalScore: $("#final-score"), bestScore: $("#best-score"), fruitCount: $("#fruit-count"), topCombo: $("#top-combo"),
+    combo: $("#combo-badge"), announcement: $("#announcement"), live: $("#live-region"),
+    sound: $("#sound-button"), soundIcon: $("#sound-icon"), soundLabel: $("#sound-label"),
+    motion: $("#motion-button"), motionLabel: $("#motion-label")
+  };
+
+  const FRUIT = [
+    { type: "apple", color: "#ef6155", accent: "#c64038", juice: "#ff8b72", radius: 36 },
+    { type: "orange", color: "#f4a43c", accent: "#dd7e1f", juice: "#ffc95e", radius: 34 },
+    { type: "melon", color: "#70b758", accent: "#367a43", juice: "#e3686a", radius: 42 },
+    { type: "lemon", color: "#f3cc45", accent: "#d69d25", juice: "#ffe978", radius: 34 },
+    { type: "plum", color: "#8061a9", accent: "#5b3c82", juice: "#b89bd7", radius: 33 },
+    { type: "pear", color: "#9fc94d", accent: "#5f953b", juice: "#cdea67", radius: 37 }
+  ];
+
+  const game = {
+    state: "ready",
+    width: 0,
+    height: 0,
+    dpr: 1,
+    score: 0,
+    lives: 3,
+    sliced: 0,
+    combo: 0,
+    topCombo: 1,
+    lastSliceAt: 0,
+    fruits: [],
+    fragments: [],
+    particles: [],
+    floaters: [],
+    trail: [],
+    pointerId: null,
+    selectedId: null,
+    spawnClock: 0,
+    elapsed: 0,
+    lastFrame: performance.now(),
+    fruitId: 0,
+    soundOn: readSetting("sliceGardenSound", true),
+    calmMode: readSetting("sliceGardenCalm", window.matchMedia("(prefers-reduced-motion: reduce)").matches),
+    best: readNumber("sliceGardenBest"),
+    audio: null
+  };
+
+  function readSetting(key, fallback) {
+    try {
+      const value = localStorage.getItem(key);
+      return value === null ? fallback : value === "true";
+    } catch (_) { return fallback; }
+  }
+
+  function readNumber(key) {
+    try { return Number(localStorage.getItem(key)) || 0; }
+    catch (_) { return 0; }
+  }
+
+  function saveSetting(key, value) {
+    try { localStorage.setItem(key, String(value)); } catch (_) { /* Local play still works. */ }
+  }
+
+  function resize() {
+    const rect = shell.getBoundingClientRect();
+    const oldW = game.width || rect.width;
+    const oldH = game.height || rect.height;
+    game.width = rect.width;
+    game.height = rect.height;
+    game.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(rect.width * game.dpr);
+    canvas.height = Math.round(rect.height * game.dpr);
+    canvas.style.width = `${rect.width}px`;
+    canvas.style.height = `${rect.height}px`;
+    ctx.setTransform(game.dpr, 0, 0, game.dpr, 0, 0);
+
+    const sx = game.width / oldW;
+    const sy = game.height / oldH;
+    [...game.fruits, ...game.fragments, ...game.particles, ...game.floaters].forEach((item) => {
+      item.x *= sx;
+      item.y *= sy;
+    });
+  }
+
+  function startRound() {
+    game.state = "playing";
+    game.score = 0;
+    game.lives = 3;
+    game.sliced = 0;
+    game.combo = 0;
+    game.topCombo = 1;
+    game.lastSliceAt = 0;
+    game.elapsed = 0;
+    game.spawnClock = 0.45;
+    game.fruits = [];
+    game.fragments = [];
+    game.particles = [];
+    game.floaters = [];
+    game.trail = [];
+    game.selectedId = null;
+    hideAllOverlays();
+    ui.pause.disabled = false;
+    updateHud();
+    ensureAudio();
+    announce("Round started. Three hearts remaining.");
+    canvas.focus({ preventScroll: true });
+  }
+
+  function showHome() {
+    game.state = "ready";
+    game.fruits = [];
+    game.fragments = [];
+    game.particles = [];
+    game.floaters = [];
+    ui.pause.disabled = true;
+    hideAllOverlays();
+    ui.startOverlay.classList.remove("hidden");
+    ui.start.focus({ preventScroll: true });
+  }
+
+  function pauseGame(auto = false) {
+    if (game.state !== "playing") return;
+    game.state = "paused";
+    finishPointer();
+    ui.pauseOverlay.classList.remove("hidden");
+    ui.pause.disabled = true;
+    ui.resume.focus({ preventScroll: true });
+    announce(auto ? "Game paused while you were away." : "Game paused.");
+  }
+
+  function resumeGame() {
+    if (game.state !== "paused") return;
+    game.state = "playing";
+    ui.pauseOverlay.classList.add("hidden");
+    ui.pause.disabled = false;
+    game.lastFrame = performance.now();
+    canvas.focus({ preventScroll: true });
+    announce("Game resumed.");
+  }
+
+  function endGame() {
+    game.state = "gameover";
+    finishPointer();
+    game.fruits = [];
+    ui.pause.disabled = true;
+    if (game.score > game.best) {
+      game.best = game.score;
+      saveSetting("sliceGardenBest", game.best);
+    }
+    ui.finalScore.textContent = game.score;
+    ui.bestScore.textContent = game.best;
+    ui.fruitCount.textContent = game.sliced;
+    ui.topCombo.textContent = `×${game.topCombo}`;
+    ui.gameoverOverlay.classList.remove("hidden");
+    if (!game.calmMode) celebrate();
+    sound("finish");
+    announce(`Round over. You scored ${game.score} points and sliced ${game.sliced} fruit.`);
+    ui.again.focus({ preventScroll: true });
+  }
+
+  function hideAllOverlays() {
+    ui.startOverlay.classList.add("hidden");
+    ui.pauseOverlay.classList.add("hidden");
+    ui.gameoverOverlay.classList.add("hidden");
+  }
+
+  function updateHud() {
+    ui.score.textContent = game.score;
+    ui.lives.textContent = Array.from({ length: 3 }, (_, i) => i < game.lives ? "♥" : "♡").join(" ");
+    ui.lives.parentElement.setAttribute("aria-label", `${game.lives} ${game.lives === 1 ? "heart" : "hearts"} remaining`);
+  }
+
+  function updatePreferences() {
+    ui.sound.setAttribute("aria-pressed", String(game.soundOn));
+    ui.soundIcon.textContent = game.soundOn ? "♪" : "×";
+    ui.soundLabel.textContent = game.soundOn ? "Sound on" : "Sound off";
+    ui.motion.setAttribute("aria-pressed", String(game.calmMode));
+    ui.motionLabel.textContent = game.calmMode ? "Calm mode on" : "Calm mode off";
+  }
+
+  function spawnFruit() {
+    if (game.fruits.length >= (game.width < 600 ? 5 : 7)) return;
+    const count = !game.calmMode && game.elapsed > 7 && Math.random() < Math.min(.32, game.elapsed / 100) ? 2 : 1;
+    for (let i = 0; i < count; i += 1) {
+      const source = FRUIT[Math.floor(Math.random() * FRUIT.length)];
+      const sizeScale = Math.max(.78, Math.min(1.08, game.width / 900));
+      const r = source.radius * sizeScale;
+      const margin = Math.max(65, r + 25);
+      const x = margin + Math.random() * Math.max(1, game.width - margin * 2);
+      const isCalm = game.calmMode;
+      const y = isCalm ? 145 + Math.random() * Math.max(100, game.height - 300) : game.height + r + Math.random() * 20;
+      const direction = x < game.width / 2 ? 1 : -1;
+      game.fruits.push({
+        ...source,
+        id: ++game.fruitId,
+        x,
+        y,
+        r,
+        vx: isCalm ? 0 : direction * (35 + Math.random() * 95),
+        vy: isCalm ? 0 : -game.height * (1.18 + Math.random() * .22),
+        gravity: game.height * 1.42,
+        rotation: (Math.random() - .5) * .3,
+        spin: (Math.random() - .5) * 1.8,
+        wasVisible: isCalm,
+        staticMode: isCalm,
+        ttl: 2.5 + Math.random() * .7,
+        maxTtl: 3.2
+      });
+    }
+  }
+
+  function update(dt, now) {
+    if (game.state !== "playing") return;
+    game.elapsed += dt;
+    game.spawnClock -= dt;
+    if (game.spawnClock <= 0) {
+      spawnFruit();
+      const pace = Math.max(.48, .9 - game.elapsed * .006);
+      game.spawnClock = pace * (.82 + Math.random() * .36);
+    }
+
+    for (let i = game.fruits.length - 1; i >= 0; i -= 1) {
+      const fruit = game.fruits[i];
+      if (fruit.staticMode) {
+        fruit.ttl -= dt;
+        fruit.rotation = Math.sin((fruit.maxTtl - fruit.ttl) * 2) * .025;
+        if (fruit.ttl <= 0) missFruit(i);
+      } else {
+        fruit.vy += fruit.gravity * dt;
+        fruit.x += fruit.vx * dt;
+        fruit.y += fruit.vy * dt;
+        fruit.rotation += fruit.spin * dt;
+        if (fruit.y + fruit.r < game.height) fruit.wasVisible = true;
+        if (fruit.wasVisible && fruit.y - fruit.r > game.height + 14 && fruit.vy > 0) missFruit(i);
+      }
+    }
+
+    game.fragments.forEach((part) => {
+      part.vy += game.height * 1.15 * dt;
+      part.x += part.vx * dt;
+      part.y += part.vy * dt;
+      part.rotation += part.spin * dt;
+      part.life -= dt;
+    });
+    game.fragments = game.fragments.filter((part) => part.life > 0 && part.y < game.height + 100);
+
+    game.particles.forEach((particle) => {
+      particle.vy += 440 * dt;
+      particle.x += particle.vx * dt;
+      particle.y += particle.vy * dt;
+      particle.life -= dt;
+    });
+    game.particles = game.particles.filter((particle) => particle.life > 0);
+
+    game.floaters.forEach((floater) => {
+      floater.y -= 38 * dt;
+      floater.life -= dt;
+    });
+    game.floaters = game.floaters.filter((floater) => floater.life > 0);
+    game.trail = game.trail.filter((point) => now - point.time < 145);
+
+    if (game.combo && now - game.lastSliceAt > 820) game.combo = 0;
+  }
+
+  function missFruit(index) {
+    game.fruits.splice(index, 1);
+    game.lives = Math.max(0, game.lives - 1);
+    game.combo = 0;
+    updateHud();
+    sound("miss");
+    const message = game.lives ? `${game.lives} ${game.lives === 1 ? "heart" : "hearts"} left` : "Round complete";
+    showAnnouncement(message);
+    announce(message);
+    if (game.lives === 0) endGame();
+  }
+
+  function sliceFruit(fruit, index, point = fruit) {
+    if (!fruit || game.state !== "playing") return;
+    const now = performance.now();
+    game.combo = now - game.lastSliceAt < 800 ? Math.min(game.combo + 1, 5) : 1;
+    game.lastSliceAt = now;
+    game.topCombo = Math.max(game.topCombo, game.combo);
+    const points = 10 * game.combo;
+    game.score += points;
+    game.sliced += 1;
+    game.fruits.splice(index, 1);
+    game.selectedId = null;
+    updateHud();
+    addSliceEffects(fruit, point, points);
+    sound("slice", game.combo);
+    if (game.combo >= 2) showCombo(game.combo);
+  }
+
+  function addSliceEffects(fruit, point, points) {
+    if (!game.calmMode) {
+      [-1, 1].forEach((side) => game.fragments.push({
+        ...fruit,
+        side,
+        x: fruit.x + side * 3,
+        y: fruit.y,
+        vx: fruit.vx * .3 + side * (75 + Math.random() * 30),
+        vy: fruit.vy * .18 - 85 - Math.random() * 35,
+        spin: side * (2.4 + Math.random()),
+        life: .72
+      }));
+      for (let i = 0; i < 9; i += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 45 + Math.random() * 150;
+        game.particles.push({
+          x: point.x, y: point.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 30,
+          radius: 2 + Math.random() * 4,
+          color: i % 3 === 0 ? "#fff5bd" : fruit.juice,
+          life: .35 + Math.random() * .3,
+          maxLife: .65
+        });
+      }
+    }
+    game.floaters.push({ x: fruit.x, y: fruit.y - fruit.r, text: `+${points}`, life: .72, maxLife: .72 });
+  }
+
+  function celebrate() {
+    const colors = ["#ef6155", "#f4c542", "#69ad58", "#8061a9", "#fff4b2"];
+    for (let i = 0; i < 24; i += 1) {
+      game.particles.push({
+        x: game.width * (.25 + Math.random() * .5),
+        y: game.height * .22,
+        vx: (Math.random() - .5) * 420,
+        vy: -100 - Math.random() * 270,
+        radius: 3 + Math.random() * 5,
+        color: colors[i % colors.length],
+        life: .8 + Math.random() * .55,
+        maxLife: 1.35
+      });
+    }
+  }
+
+  function pointerPosition(event) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  function onPointerDown(event) {
+    if (game.state !== "playing" || game.pointerId !== null) return;
+    event.preventDefault();
+    game.pointerId = event.pointerId;
+    canvas.setPointerCapture?.(event.pointerId);
+    const point = pointerPosition(event);
+    game.trail.push({ ...point, time: performance.now() });
+    checkPointHit(point);
+  }
+
+  function onPointerMove(event) {
+    if (game.state !== "playing" || event.pointerId !== game.pointerId) return;
+    event.preventDefault();
+    const point = pointerPosition(event);
+    const last = game.trail[game.trail.length - 1] || point;
+    checkLineHits(last, point);
+    game.trail.push({ ...point, time: performance.now() });
+    if (game.trail.length > 18) game.trail.shift();
+  }
+
+  function finishPointer(event) {
+    if (event && game.pointerId !== null && event.pointerId !== game.pointerId) return;
+    if (game.pointerId !== null) {
+      try { canvas.releasePointerCapture?.(game.pointerId); } catch (_) { /* Already released. */ }
+    }
+    game.pointerId = null;
+  }
+
+  function checkPointHit(point) {
+    for (let i = game.fruits.length - 1; i >= 0; i -= 1) {
+      const fruit = game.fruits[i];
+      if (Math.hypot(point.x - fruit.x, point.y - fruit.y) <= fruit.r + 10) {
+        sliceFruit(fruit, i, point);
+        return;
+      }
+    }
+  }
+
+  function checkLineHits(a, b) {
+    const hits = game.fruits
+      .map((fruit, index) => ({ fruit, index, distance: segmentDistance(fruit.x, fruit.y, a.x, a.y, b.x, b.y) }))
+      .filter((hit) => hit.distance <= hit.fruit.r + 7)
+      .sort((first, second) => first.index - second.index)
+      .reverse();
+    hits.forEach((hit) => {
+      const currentIndex = game.fruits.findIndex((fruit) => fruit.id === hit.fruit.id);
+      if (currentIndex >= 0) sliceFruit(hit.fruit, currentIndex, b);
+    });
+  }
+
+  function segmentDistance(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    if (dx === 0 && dy === 0) return Math.hypot(px - x1, py - y1);
+    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  }
+
+  function chooseFruit(direction) {
+    const available = [...game.fruits].sort((a, b) => a.x - b.x);
+    if (!available.length) {
+      game.selectedId = null;
+      announce("No fruit to choose yet.");
+      return;
+    }
+    let index = available.findIndex((fruit) => fruit.id === game.selectedId);
+    index = index < 0 ? (direction > 0 ? 0 : available.length - 1) : (index + direction + available.length) % available.length;
+    game.selectedId = available[index].id;
+  }
+
+  function sliceSelected() {
+    if (!game.fruits.length) {
+      announce("No fruit to slice yet.");
+      return;
+    }
+    let index = game.fruits.findIndex((fruit) => fruit.id === game.selectedId);
+    if (index < 0) {
+      const highest = game.fruits.reduce((best, fruit, i) => fruit.y < game.fruits[best].y ? i : best, 0);
+      index = highest;
+    }
+    sliceFruit(game.fruits[index], index);
+  }
+
+  function render(now) {
+    ctx.setTransform(game.dpr, 0, 0, game.dpr, 0, 0);
+    ctx.clearRect(0, 0, game.width, game.height);
+    drawAmbientDetails();
+    game.fruits.forEach((fruit) => drawFruit(fruit, fruit.id === game.selectedId));
+    game.fragments.forEach(drawFragment);
+    drawParticles();
+    drawFloaters();
+    drawTrail(now);
+  }
+
+  function drawAmbientDetails() {
+    ctx.save();
+    ctx.globalAlpha = .15;
+    ctx.fillStyle = "#fff";
+    for (let i = 0; i < 9; i += 1) {
+      const x = (i * 137 + 48) % game.width;
+      const y = game.height * .61 + (i % 3) * 46;
+      ctx.beginPath();
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawFruit(fruit, selected = false) {
+    ctx.save();
+    ctx.translate(fruit.x, fruit.y);
+    ctx.rotate(fruit.rotation);
+    if (selected) {
+      ctx.strokeStyle = "#2459d3";
+      ctx.lineWidth = 4;
+      ctx.setLineDash([8, 6]);
+      ctx.beginPath();
+      ctx.arc(0, 0, fruit.r + 12, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.shadowColor = "rgba(28,66,42,.22)";
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 7;
+    drawFruitBody(fruit);
+    ctx.restore();
+
+    if (fruit.staticMode) {
+      const progress = Math.max(0, fruit.ttl / fruit.maxTtl);
+      ctx.save();
+      ctx.strokeStyle = progress < .35 ? "#b44b30" : "rgba(255,255,255,.82)";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(fruit.x, fruit.y, fruit.r + 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawFruitBody(fruit) {
+    const r = fruit.r;
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(2, r * .075);
+    ctx.strokeStyle = fruit.accent;
+    ctx.fillStyle = fruit.color;
+    ctx.beginPath();
+
+    if (fruit.type === "apple") {
+      ctx.moveTo(0, -r * .66);
+      ctx.bezierCurveTo(-r * .22, -r * 1.02, -r * 1.02, -r * .72, -r * .9, .05 * r);
+      ctx.bezierCurveTo(-r * .82, r * .77, -r * .3, r, 0, r * .82);
+      ctx.bezierCurveTo(r * .3, r, r * .82, r * .77, r * .9, .05 * r);
+      ctx.bezierCurveTo(r * 1.02, -r * .72, r * .22, -r * 1.02, 0, -r * .66);
+    } else if (fruit.type === "lemon") {
+      ctx.moveTo(-r * 1.02, 0);
+      ctx.bezierCurveTo(-r * .62, -r * .85, r * .62, -r * .85, r * 1.02, 0);
+      ctx.bezierCurveTo(r * .62, r * .85, -r * .62, r * .85, -r * 1.02, 0);
+    } else if (fruit.type === "pear") {
+      ctx.moveTo(0, -r);
+      ctx.bezierCurveTo(-r * .2, -r * .58, -r * .84, -r * .36, -r * .78, r * .3);
+      ctx.bezierCurveTo(-r * .72, r, r * .72, r, r * .78, r * .3);
+      ctx.bezierCurveTo(r * .84, -r * .36, r * .2, -r * .58, 0, -r);
+    } else if (fruit.type === "melon") {
+      ctx.ellipse(0, 0, r * .82, r, 0, 0, Math.PI * 2);
+    } else {
+      ctx.arc(0, 0, r * .9, 0, Math.PI * 2);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowColor = "transparent";
+
+    if (fruit.type === "orange") {
+      ctx.strokeStyle = "rgba(255,245,190,.42)";
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 7; i += 1) {
+        const angle = i * .86;
+        ctx.beginPath();
+        ctx.arc(Math.cos(angle) * r * .52, Math.sin(angle) * r * .52, 1.6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    if (fruit.type === "melon") {
+      ctx.strokeStyle = "rgba(32,101,55,.52)";
+      ctx.lineWidth = 3;
+      [-.42, 0, .42].forEach((position) => {
+        ctx.beginPath();
+        ctx.moveTo(position * r, -r * .82);
+        ctx.quadraticCurveTo(position * r * .35, 0, position * r, r * .82);
+        ctx.stroke();
+      });
+    }
+
+    ctx.fillStyle = "rgba(255,255,255,.34)";
+    ctx.beginPath();
+    ctx.ellipse(-r * .32, -r * .33, r * .18, r * .3, .55, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#5a4b31";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, -r * .72);
+    ctx.quadraticCurveTo(r * .04, -r * 1.04, r * .16, -r * 1.13);
+    ctx.stroke();
+    ctx.fillStyle = "#4f944a";
+    ctx.beginPath();
+    ctx.ellipse(r * .32, -r * .94, r * .24, r * .11, -.45, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (r > 27) {
+      ctx.fillStyle = "rgba(45,48,39,.78)";
+      ctx.beginPath();
+      ctx.arc(-r * .2, r * .08, 2.1, 0, Math.PI * 2);
+      ctx.arc(r * .2, r * .08, 2.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(45,48,39,.72)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, r * .16, r * .14, .15, Math.PI - .15);
+      ctx.stroke();
+    }
+  }
+
+  function drawFragment(part) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, part.life * 2.5);
+    ctx.translate(part.x, part.y);
+    ctx.rotate(part.rotation);
+    ctx.beginPath();
+    if (part.side < 0) ctx.rect(-part.r * 1.5, -part.r * 1.5, part.r * 1.5, part.r * 3);
+    else ctx.rect(0, -part.r * 1.5, part.r * 1.5, part.r * 3);
+    ctx.clip();
+    drawFruitBody(part);
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    game.particles.forEach((particle) => {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife);
+      ctx.fillStyle = particle.color;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  function drawFloaters() {
+    game.floaters.forEach((floater) => {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, floater.life * 2.8);
+      ctx.font = "900 21px ui-rounded, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(35,76,54,.48)";
+      ctx.strokeText(floater.text, floater.x, floater.y);
+      ctx.fillStyle = "#fffdf5";
+      ctx.fillText(floater.text, floater.x, floater.y);
+      ctx.restore();
+    });
+  }
+
+  function drawTrail(now) {
+    if (game.trail.length < 2) return;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (let i = 1; i < game.trail.length; i += 1) {
+      const a = game.trail[i - 1];
+      const b = game.trail[i];
+      const alpha = Math.max(0, 1 - (now - b.time) / 145);
+      ctx.strokeStyle = `rgba(255, 253, 192, ${alpha * .92})`;
+      ctx.shadowColor = "rgba(255,255,220,.8)";
+      ctx.shadowBlur = 9;
+      ctx.lineWidth = 3 + alpha * 5;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function showCombo(combo) {
+    ui.combo.textContent = `Combo ×${combo}!`;
+    ui.combo.classList.remove("show");
+    void ui.combo.offsetWidth;
+    ui.combo.classList.add("show");
+  }
+
+  function showAnnouncement(text) {
+    ui.announcement.textContent = text;
+    ui.announcement.classList.remove("show");
+    void ui.announcement.offsetWidth;
+    ui.announcement.classList.add("show");
+  }
+
+  function announce(text) {
+    ui.live.textContent = "";
+    window.setTimeout(() => { ui.live.textContent = text; }, 20);
+  }
+
+  function ensureAudio() {
+    if (!game.soundOn) return;
+    if (!game.audio) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) game.audio = new AudioContext();
+    }
+    if (game.audio?.state === "suspended") game.audio.resume();
+  }
+
+  function sound(kind, combo = 1) {
+    if (!game.soundOn) return;
+    ensureAudio();
+    if (!game.audio) return;
+    const audio = game.audio;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    const now = audio.currentTime;
+    oscillator.type = kind === "miss" ? "sine" : "triangle";
+    const frequencies = kind === "slice" ? [420, 520 + combo * 45] : kind === "finish" ? [392, 523] : [210, 155];
+    oscillator.frequency.setValueAtTime(frequencies[0], now);
+    oscillator.frequency.exponentialRampToValueAtTime(frequencies[1], now + (kind === "finish" ? .22 : .1));
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(kind === "miss" ? .035 : .05, now + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + (kind === "finish" ? .32 : .14));
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start(now);
+    oscillator.stop(now + (kind === "finish" ? .34 : .16));
+  }
+
+  function frame(now) {
+    const dt = Math.min(.033, Math.max(0, (now - game.lastFrame) / 1000));
+    game.lastFrame = now;
+    update(dt, now);
+    render(now);
+    requestAnimationFrame(frame);
+  }
+
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointermove", onPointerMove);
+  canvas.addEventListener("pointerup", finishPointer);
+  canvas.addEventListener("pointercancel", finishPointer);
+  canvas.addEventListener("lostpointercapture", () => { game.pointerId = null; });
+  canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+
+  canvas.addEventListener("keydown", (event) => {
+    if (game.state !== "playing") return;
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      chooseFruit(event.key === "ArrowRight" ? 1 : -1);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      sliceSelected();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if ((event.key === "p" || event.key === "P" || event.key === "Escape") && !event.repeat) {
+      if (game.state === "playing") pauseGame();
+      else if (game.state === "paused") resumeGame();
+    }
+    if ((event.key === "r" || event.key === "R") && !event.repeat && game.state === "gameover") startRound();
+  });
+
+  ui.start.addEventListener("click", startRound);
+  ui.pause.addEventListener("click", () => pauseGame());
+  ui.resume.addEventListener("click", resumeGame);
+  ui.restart.addEventListener("click", startRound);
+  ui.again.addEventListener("click", startRound);
+  ui.home.addEventListener("click", showHome);
+
+  ui.sound.addEventListener("click", () => {
+    game.soundOn = !game.soundOn;
+    saveSetting("sliceGardenSound", game.soundOn);
+    updatePreferences();
+    if (game.soundOn) sound("slice", 1);
+  });
+
+  ui.motion.addEventListener("click", () => {
+    game.calmMode = !game.calmMode;
+    saveSetting("sliceGardenCalm", game.calmMode);
+    updatePreferences();
+    showAnnouncement(game.calmMode ? "Calm mode on" : "Calm mode off");
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && game.state === "playing") pauseGame(true);
+  });
+
+  window.addEventListener("resize", resize, { passive: true });
+  new ResizeObserver(resize).observe(shell);
+
+  resize();
+  updateHud();
+  updatePreferences();
+  ui.bestScore.textContent = game.best;
+  requestAnimationFrame(frame);
+})();
+
+  </script>
+</body>
+</html>
